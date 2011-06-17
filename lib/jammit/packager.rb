@@ -57,12 +57,12 @@ module Jammit
       repo = Grit::Repo.new(@root_path || Dir.pwd)
       commits = {}
       @packages[extension.to_sym][package][:paths].each do |path|
-        js = repo.log('master', path, :max_count => 1).first
+        js = repo.log(repo.head.commit.id, path, :max_count => 1).first
         next unless js
         commits[js.committed_date.to_i] = js
       end
       recent_commit = commits.sort { |a, b| a.first <=> b.first }
-      puts "[jammit] revision #{recent_commit.last.last.id}/#{package}"
+      puts "[jammit] revision #{recent_commit.last.last.id}/#{package}" unless commits.empty?
       recent_commit.last.last.id unless commits.empty?
     end
 
