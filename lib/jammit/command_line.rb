@@ -63,6 +63,9 @@ Options:
         opts.on('-f', '--force', 'force a rebuild of all assets') do |force|
           @options[:force] = force
         end
+        opts.on('-r', '--root PATH', 'root path to Git repository (default: "' + Dir.pwd + '")') do |root_path|
+          @options[:root_path] = root_path
+        end
         opts.on_tail('-v', '--version', 'display Jammit version') do
           puts "Jammit version #{Jammit::VERSION}"
           exit

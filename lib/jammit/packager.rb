@@ -14,6 +14,8 @@ module Jammit
     # files have changed since the last time their package was built.
     attr_accessor :force
 
+    attr_accessor :root_path
+
     # Creating a new Packager will rebuild the list of assets from the
     # Jammit.configuration. When assets.yml is being changed on the fly,
     # create a new Packager.
@@ -51,17 +53,33 @@ module Jammit
       end
     end
 
+    def buster(package, extension)
+      repo = Grit::Repo.new(@root_path || Dir.pwd)
+      commits = {}
+      @packages[extension.to_sym][package][:paths].each do |path|
+        js = repo.log('master', path, :max_count => 1).first
+        next unless js
+        commits[js.committed_date.to_i] = js
+      end
+      recent_commit = commits.sort { |a, b| a.first <=> b.first }
+      puts "[jammit] revision #{recent_commit.last.last.id}/#{package}"
+      recent_commit.last.last.id unless commits.empty?
+    end
+
     # Caches a single prebuilt asset package and gzips it at the highest
     # compression level. Ensures that the modification time of both both
     # variants is identical, for web server caching modules, as well as MHTML.
     def cache(package, extension, contents, output_dir, suffix=nil, mtime=Time.now)
+      commit = self.buster(package, extension)
+      output_dir = File.join(output_dir, commit || 'undefined')
+
       FileUtils.mkdir_p(output_dir) unless File.exists?(output_dir)
       raise OutputNotWritable, "Jammit doesn't have permission to write to \"#{output_dir}\"" unless File.writable?(output_dir)
       files = []
       files << file_name = File.join(output_dir, Jammit.filename(package, extension, suffix))
       File.open(file_name, 'wb+') {|f| f.write(contents) }
       if Jammit.gzip_assets
-        files << zip_name = "#{file_name}.gz"
+        files << zip_name = "#{file_name}.jgz"
         Zlib::GzipWriter.open(zip_name, Zlib::BEST_COMPRESSION) {|f| f.write(contents) }
       end
       File.utime(mtime, mtime, *files)

@@ -121,7 +121,35 @@ module Jammit
     }.merge(options)
     load_configuration(options[:config_path])
     packager.force = options[:force]
+    packager.root_path = options[:root_path]
     packager.precache_all(options[:output_folder], options[:base_url])
+  end
+
+  # Author: Henry Hsu
+  # Deprecate this or offer new API
+  def self.buster(options={})
+    options = {
+      :config_path    => Jammit::DEFAULT_CONFIG_PATH,
+      :output_folder  => nil,
+      :base_url       => nil,
+      :force          => false
+    }.merge(options)
+    load_configuration(options[:config_path])
+    packager.force = options[:force]
+
+    repo = Grit::Repo.new(Dir.pwd)
+    @commits = {}
+    Jammit.packager.instance_variable_get(:@config).each do |name, globs|
+      globs.each do |package, file_names|
+        file_names.each do |file_name|
+          js = repo.log('master', File.join(ASSET_ROOT, file_name), :max_count => 1).first
+          next unless js
+          @commits[js.committed_date.to_i] = js
+        end
+      end
+    end
+    recent_commit = @commits.sort { |a, b| a.first <=> b.first }
+    recent_commit.last.last.id
   end
 
   private

@@ -26,3 +26,4 @@ if defined?(Rails)
   require 'jammit/routes'
 end
 
+require 'grit'
