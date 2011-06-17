@@ -54,16 +54,19 @@ module Jammit
     end
 
     def buster(package, extension)
-      repo = Grit::Repo.new(@root_path || Dir.pwd)
+      repo_root = @root_path || Dir.pwd
+      repo = Grit::Repo.new(repo_root)
       commits = {}
       @packages[extension.to_sym][package][:paths].each do |path|
-        js = repo.log(repo.head.commit.id, path, :max_count => 1).first
+        js = repo.log(repo.head.commit.id, path.sub(%r{^#{repo_root}/}, ''), :max_count => 1).first
         next unless js
         commits[js.committed_date.to_i] = js
       end
       recent_commit = commits.sort { |a, b| a.first <=> b.first }
-      puts "[jammit] revision #{recent_commit.last.last.id}/#{package}" unless commits.empty?
-      recent_commit.last.last.id unless commits.empty?
+      unless commits.empty?
+        puts "[jammit] revision #{recent_commit.last.last.id}/#{package}"
+        recent_commit.last.last.id
+      end
     end
 
     # Caches a single prebuilt asset package and gzips it at the highest
